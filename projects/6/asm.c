@@ -88,7 +88,7 @@ char * tobin(int num){
         bin[m] = '0';
         m++;
     }
-    bin[16] = '\0';
+    bin[15] = '\0';
     return bin;
 }
 int main(int argc, char *argv[]) {
@@ -103,12 +103,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    char (*file_data)[LINE_SIZE] = malloc(sizeof(char[LINE_SIZE]) * MAX_LINES);
-    if (!file_data) {
-        fprintf(stderr, "Allocation failed\n");
-        fclose(file);
-        return 1;
-    }
+
     int line_count = 0;
     char buffer[LINE_SIZE];
     char ch;
@@ -148,28 +143,33 @@ int main(int argc, char *argv[]) {
             }
             symb[symind] = '\0';
             printf("%s\n",symb);
-
+            if(find_sym(symb)==-1){
+                add_sym(symb,line_count);
+            }
 
             continue;
         }else{
             strcpy(file_buffer[line_count], buffer);
         }
-        
-        // else if( buffer[0] == '@'){
-        //     char temp[LINE_SIZE];
-        //     int k = 1;
-        //     while(0);
-        //     printf("%d A -: %s",line_count, buffer); 
-        // }
-        // else{
-        //     printf("%d C -: %s",line_count, buffer); 
-        // }
-        
         line_count++;
-        // memset(buffer, 0, sizeof(buffer));
-
     }
-    
+    fclose(file);
+    printf("\nSymbol Table:\n");
+    for(int i = 0; i < symbol_table.count; i++) {
+        printf("%s: %d\n", symbol_table.id[i], symbol_table.value[i]);
+    }
+    printf("\nFile Buffer:\n");
+    for(int i = 0; i < line_count; i++) {
+        printf("Line %d: %s", i, file_buffer[i]);
+    }
 
+    char (*file_data)[LINE_SIZE] = malloc(sizeof(char[LINE_SIZE]) * MAX_LINES);
+    if (!file_data) {
+        fprintf(stderr, "Allocation failed\n");
+        fclose(file);
+        return 1;
+    }
+
+    
     return 0;
 }
