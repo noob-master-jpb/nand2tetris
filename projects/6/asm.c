@@ -154,14 +154,15 @@ int main(int argc, char *argv[]) {
         line_count++;
     }
     fclose(file);
+    
     printf("\nSymbol Table:\n");
     for(int i = 0; i < symbol_table.count; i++) {
         printf("%s: %d\n", symbol_table.id[i], symbol_table.value[i]);
     }
     printf("\nFile Buffer:\n");
-    for(int i = 0; i < line_count; i++) {
-        printf("Line %d: %s", i, file_buffer[i]);
-    }
+    // for(int i = 0; i < line_count; i++) {
+    //     printf("Line %d: %s", i, file_buffer[i]);
+    // }
 
     char (*file_data)[LINE_SIZE] = malloc(sizeof(char[LINE_SIZE]) * MAX_LINES);
     if (!file_data) {
@@ -169,7 +170,64 @@ int main(int argc, char *argv[]) {
         fclose(file);
         return 1;
     }
+    for(int i = 0; i < line_count; i++) {
+        strcpy(buffer, file_buffer[i]);
+        if(buffer[0]=='@'){
+            // printf("%s",buffer);
+            int h =1;
+            char tmpsymb[LINE_SIZE];
+            int isdig = 1;
 
-    
+            while ((buffer[h]!='\0')&&(buffer[h]!='\n'))
+            {
+                if(!(isdigit(buffer[h]))){
+                    isdig = 0;
+                }
+
+                tmpsymb[h-1] = buffer[h];
+                h++;
+            }
+            tmpsymb[h-1]='\0';
+            int f;
+            if(isdig){
+                f = atoi(tmpsymb);
+            }else{
+                f = find_sym(tmpsymb);
+                if(f==-1){
+                    add_sym(tmpsymb,next_var_addr);
+                    f = next_var_addr;
+                    next_var_addr++;
+                }
+            }
+            char fbin[16] = "0";
+            strcat(fbin,tobin(f));
+            // printf("%s\n",fbin);
+            // printf("@%d\n",f);
+            strcpy(file_data[i],fbin);
+        }else{
+            // printf("%s",buffer);
+            int h =0;
+            int tmpind = 0;
+            while((buffer[h]!='\0')&&(buffer[h]!='\n')){
+                char tempdata[50];
+                if(buffer[h]=='='){
+                    for(int ij=tmpind;ij<h;ij++){
+                        tempdata[ij]=buffer[ij];    
+                    }
+                    tmpind=h+1;
+                    tempdata[h]='\0';
+                    printf("%s\n",tempdata);
+                }
+                h++;
+            
+            }
+        }
+        
+    }
+
+    // printf("\nFile Data (Binary):\n");
+    // for(int i = 0; i < line_count; i++) {
+    //     printf("Line %d: %s\n", i, file_data[i]);
+    // }
     return 0;
 }
