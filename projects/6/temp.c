@@ -220,9 +220,11 @@ int main(int argc, char *argv[]) {
                     next_var_addr++;
                 }
             }
-            // char fbin[16] = "0";
-            // strcat(fbin,tobin(f));
-            // strcpy(file_data[i],fbin);
+            char fbin[16] = "0";
+            strcat(fbin,tobin(f));
+            // printf("%s\n",fbin);
+            // printf("@%d\n",f);
+            strcpy(file_data[i],fbin);
         }else{
             // printf("%s",buffer);
             int desti = 0, compi = 0, jumpi = 0; 
@@ -231,7 +233,46 @@ int main(int argc, char *argv[]) {
             char cmp[4]="null";
             int h =0;
             int tmpind = 0;
-            printf("%s",cmp);
+            while((buffer[h]!='\0')&&(buffer[h]!='\n')){
+                char tempdata[50];
+                if(buffer[h]=='='){
+                    for(int ij=tmpind; ij<h; ij++){
+                        tempdata[ij-tmpind]=buffer[ij];  // ✅ Correct: subtract tmpind
+                    }
+                    tempdata[h-tmpind]='\0';             // ✅ Correct: null terminate at proper position
+                    strcpy(des,tempdata);
+                    desti = 1;
+                    tmpind=h+1;
+                    printf("DEST - %s\n",des);
+                }else if(buffer[h]==';'){
+                    for(int ij=tmpind; ij<h; ij++){
+                        tempdata[ij-tmpind]=buffer[ij];    // ✅ Correct indexing
+                    }
+                    tempdata[h-tmpind]='\0';               // ✅ Correct null terminator
+                    strcpy(cmp,tempdata);
+                    printf("COMP - %s\n",cmp);    
+                    compi = 1;
+                    tmpind=h+1;  // Move this before jump extraction
+                    
+                    // Extract jump part
+                    int jmp_len = 0;
+                    for(int ij=tmpind; ij<strlen(buffer); ij++){
+                        if(buffer[ij]!='\n' && buffer[ij]!='\0'){
+                            tempdata[jmp_len]=buffer[ij];    // ✅ Use jmp_len for indexing
+                            jmp_len++;
+                        }
+                    }
+                    tempdata[jmp_len]='\0';                // ✅ Correct null terminator
+                    strcpy(jmp,tempdata);
+                    jumpi = 1;
+                    printf("JUMP - %s\n",jmp);
+                }else if((desti==1)&&(compi==0)){
+                    
+                }
+                
+                h++;
+            
+            }
         }
         
     }
