@@ -15,18 +15,18 @@ struct table {
     int  count;
 };
 struct jump_table{
-    char id[8][4];
-    char value[8][3];
+    char id[8][5];    // Changed from 4 to 5 to fit "null\0"
+    char value[8][4]; // Changed from 3 to 4 to fit "000\0"
 };
 
 struct dest_table{
-    char id[8][4];
-    char value[8][3];
+    char id[8][5];    // Changed from 4 to 5 to fit "null\0" 
+    char value[8][4]; // Changed from 3 to 4 to fit "000\0"
 };
 
 struct comp_table{
-    char id[36][3];
-    char value[36][7];
+    char id[36][4];
+    char value[36][8];
 };
 
 struct table symbol_table = {
@@ -66,10 +66,34 @@ struct jump_table jump = {
     .value = {"000","001","010","011","100","101","110","111"},
 };
 
+char* find_jmp(char id[]){
+    int c = 0;
+    while(c<8){
+        if(strcmp(jump.id[c],id) == 0){
+            return jump.value[c];
+        }
+        c++;
+    }
+    return NULL;
+}
+
+
 struct dest_table dest = {
     .id = {"null","M","D","MD","A","AM","AD","AMD"},
     .value = {"000","001","010","011","100","101","110","111"},
 };
+
+
+char* find_des(char id[]){
+    int c = 0;
+    while(c<8){
+        if(strcmp(dest.id[c],id) == 0){
+            return dest.value[c];
+        }
+        c++;
+    }
+    return NULL;
+}
 
 struct comp_table comp = {
     .id = {"0","1","-1",
@@ -97,6 +121,17 @@ struct comp_table comp = {
 };
 
 
+char* find_cmp(char id[]){
+    int c = 0;
+    while(c<28){
+        if(strcmp(comp.id[c],id) == 0){
+            return comp.value[c];
+        }
+        c++;
+    }
+    return NULL;
+}
+
 char * tobin(int num){
     char *bin = malloc(16);
     int m =0;
@@ -113,6 +148,7 @@ char * tobin(int num){
     return bin;
 }
 int main(int argc, char *argv[]) {
+    
     if (argc != 2) {
         fprintf(stderr, "Usage: %s <inputfile>\n", argv[0]);
         return 1;
@@ -191,6 +227,7 @@ int main(int argc, char *argv[]) {
         fclose(file);
         return 1;
     }
+    
     for(int i = 0; i < line_count; i++) {
         strcpy(buffer, file_buffer[i]);
         if(buffer[0]=='@'){
@@ -220,22 +257,56 @@ int main(int argc, char *argv[]) {
                     next_var_addr++;
                 }
             }
-            // char fbin[16] = "0";
-            // strcat(fbin,tobin(f));
-            // strcpy(file_data[i],fbin);
+            char fbin[16] = "0";
+            strcat(fbin,tobin(f));
+            strcpy(file_data[i],fbin);
         }else{
-            // printf("%s",buffer);
             int desti = 0, compi = 0, jumpi = 0; 
-            char des[4]="null";
-            char jmp[4]="null";
-            char cmp[4]="null";
-            int h =0;
+            char des[10]="null\0";
+            char jmp[10]="null\0";
+            char cmp[10]="null\0";
+
             int tmpind = 0;
-            printf("%s",cmp);
+            char tempdata[10];
+            for(int j = 0; buffer[j] != '\0' && buffer[j] != '\n'; j++) {
+                if(buffer[j]=='='){
+                    tempdata[tmpind]='\0';
+                    strcpy(des,tempdata);
+                    desti = 1;
+                    tmpind = 0;
+                    j++;
+                }else if(buffer[j]==';'){
+                    tempdata[tmpind]='\0';
+                    strcpy(cmp,tempdata);
+                    compi = 1;
+                    tmpind = 0;
+                    j++;
+                }
+                tempdata[tmpind]=buffer[j];
+                tmpind++;
+            }
+            if((desti == 1)&&(compi==0)){
+                    tempdata[tmpind]='\0';
+                    strcpy(cmp,tempdata);
+                    compi = 1;
+                    tmpind = 0;
+            }else if((compi==1)&&(jumpi==0)){
+                tempdata[tmpind]='\0';
+                strcpy(jmp,tempdata);
+                jumpi = 1;
+                tmpind = 0;
+            }
+            
+            printf("%s %s %s\n",des,cmp,jmp);
+            char cbin[16] = "111";
+            char desbit[4];
+            char jmpbit[4];
+            char cmpbit[8];
+            strcpy(cmpbit,find_cmp(cmp));
         }
         
     }
-
+    
     // printf("\nFile Data (Binary):\n");
     // for(int i = 0; i < line_count; i++) {
     //     printf("Line %d: %s\n", i, file_data[i]);
