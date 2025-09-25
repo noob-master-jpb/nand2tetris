@@ -3,9 +3,9 @@
 #include <stdlib.h>
 #include <ctype.h>
 
-#define LINE_SIZE 300
-#define MAX_LINES 50000      
-#define MAX_SYMBOLS 512
+#define LINE_SIZE 1000
+#define MAX_LINES 30000      
+#define MAX_SYMBOLS 4096
 
 int next_var_addr = 16;
 
@@ -160,7 +160,16 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-
+    // Print file contents for debugging
+    // printf("File contents:\n");
+    // rewind(file);
+    // char temp_buffer[LINE_SIZE];
+    // int temp_line = 0;
+    // while (fgets(temp_buffer, sizeof(temp_buffer), file) != NULL) {
+    //     printf("Line %d: %s", temp_line++, temp_buffer);
+    // }
+    // rewind(file);
+    // printf("\n");
     int line_count = 0;
     char buffer[LINE_SIZE];
     char ch;
@@ -170,9 +179,13 @@ int main(int argc, char *argv[]) {
         fclose(file);
         return 1;
     }
-    // printf("%p",file_buffer);
+    
+    int ll =0;
+
     while (fgets(buffer, sizeof(buffer), file) != NULL && line_count < MAX_LINES)
     {
+        // printf("%s %d",buffer,ll);  // Remove this line - it's flooding output
+        ll++;
         int shift = 0;
         while(buffer[shift] == ' ' || buffer[shift] == '\t') {
             shift++;
@@ -199,7 +212,7 @@ int main(int argc, char *argv[]) {
                 symb[symind++] = buffer[j++];
             }
             symb[symind] = '\0';
-            printf("%s\n",symb);
+            // printf("%s\n",symb);
             if(find_sym(symb)==-1){
                 add_sym(symb,line_count);
             }
@@ -212,14 +225,16 @@ int main(int argc, char *argv[]) {
     }
     fclose(file);
     
-    printf("\nSymbol Table:\n");
-    for(int i = 0; i < symbol_table.count; i++) {
-        printf("%s: %d\n", symbol_table.id[i], symbol_table.value[i]);
-    }
-    printf("\nFile Buffer:\n");
+    // printf("\nSymbol Table:\n");
+    // for(int i = 0; i < symbol_table.count; i++) {
+    //     printf("%s: %d\n", symbol_table.id[i], symbol_table.value[i]);
+    // }
+    // printf("\nFile Buffer:\n");
     // for(int i = 0; i < line_count; i++) {
     //     printf("Line %d: %s", i, file_buffer[i]);
     // }
+
+    printf("first pass done");
 
     char (*file_data)[LINE_SIZE] = malloc(sizeof(char[LINE_SIZE]) * MAX_LINES);
     if (!file_data) {
@@ -257,9 +272,11 @@ int main(int argc, char *argv[]) {
                     next_var_addr++;
                 }
             }
-            char fbin[16] = "0";
-            strcat(fbin,tobin(f));
-            strcpy(file_data[i],fbin);
+            char *bin_str = tobin(f);
+            char fbin[17] = "0";  // Increased size
+            strcat(fbin, bin_str);
+            free(bin_str);  // Add this line
+            strcpy(file_data[i], fbin);
         }else{
             int desti = 0, compi = 0, jumpi = 0; 
             char des[10]="null\0";
@@ -297,19 +314,93 @@ int main(int argc, char *argv[]) {
                 tmpind = 0;
             }
             
-            printf("%s %s %s\n",des,cmp,jmp);
-            char cbin[16] = "111";
+            // printf("%s %s %s\n",des,cmp,jmp);
+            char cbin[17] = "111";  // Need 17 chars: "111" + 7 + 3 + 3 + '\0'
             char desbit[4];
             char jmpbit[4];
             char cmpbit[8];
-            strcpy(cmpbit,find_cmp(cmp));
+
+            // Add this debugging instead:
+            // printf("Parsing line %d: '%s'\n", i, buffer);
+            printf("des:'%s' cmp:'%s' jmp:'%s'\n", des, cmp, jmp);
+
+            // Strip whitespace from cmp, jmp, and des
+            char *start, *end;
+
+            // Strip cmp
+            start = cmp;
+            while(isspace(*start)) start++;
+            end = start + strlen(start) - 1;
+            while(end > start && isspace(*end)) end--;
+            *(end + 1) = '\0';
+            memmove(cmp, start, end - start + 2);
+
+            // Strip jmp
+            start = jmp;
+            while(isspace(*start)) start++;
+            end = start + strlen(start) - 1;
+            while(end > start && isspace(*end)) end--;
+            *(end + 1) = '\0';
+            memmove(jmp, start, end - start + 2);
+
+            // Strip des
+            start = des;
+            while(isspace(*start)) start++;
+            end = start + strlen(start) - 1;
+            while(end > start && isspace(*end)) end--;
+            *(end + 1) = '\0';
+            memmove(des, start, end - start + 2);
+
+            char *cmp_result = find_cmp(cmp);
+            char *jmp_result = find_jmp(jmp);
+            char *des_result = find_des(des);
+
+            if (!cmp_result) printf("FAILED to find cmp: '%s'\n", cmp);
+            if (!jmp_result) printf("FAILED to find jmp: '%s'\n", jmp);
+            if (!des_result) printf("FAILED to find des: '%s'\n", des);
+
+            if (!cmp_result || !jmp_result || !des_result) {
+                printf("skipping\n");
+                continue;  // Skip this line, don't exit
+            }
+
+            strcpy(cmpbit, cmp_result);
+            strcpy(jmpbit, jmp_result);
+            strcpy(desbit, des_result);
+                strcat(cbin,cmpbit);
+                strcat(cbin,desbit);
+                strcat(cbin,jmpbit);
+                cbin[16]='\0';  // This is correct now
+                // printf("%s\n",cbin);
+                strcpy(file_data[i],cbin);
         }
         
     }
-    
-    // printf("\nFile Data (Binary):\n");
-    // for(int i = 0; i < line_count; i++) {
-    //     printf("Line %d: %s\n", i, file_data[i]);
-    // }
+
+    char output_filename[256];
+    strcpy(output_filename, argv[1]);
+    char *dot = strrchr(output_filename, '.');
+    if (dot && strcmp(dot, ".asm") == 0) {
+        strcpy(dot, ".hack");
+    } else {
+        strcat(output_filename, ".hack");
+    }
+
+    FILE *output_file = fopen(output_filename, "w");
+    if (!output_file) {
+        perror("Error creating output file");
+        free(file_buffer);
+        free(file_data);
+        return 1;
+    }
+
+    for (int i = 0; i < line_count; i++) {
+        fprintf(output_file, "%s\n", file_data[i]);
+    }
+    fclose(output_file);
+    free(file_buffer);
+    free(file_data);
+
+    printf("Binary output written to %s\n", output_filename);
     return 0;
 }
